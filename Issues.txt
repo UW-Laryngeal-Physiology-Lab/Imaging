@@ -1,0 +1,9 @@
+CombineToHeatmap:
+    -Contour doesn't line up with the image
+    
+FreqWave:
+    -"Error while evaluating UI Control Callback"
+    -ROI re-adjust during rotation
+
+AutoMucWave:
+    -Progress Bar
