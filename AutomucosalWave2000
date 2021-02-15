@@ -1,0 +1,917 @@
+classdef AutoMuceWave2000 < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                    matlab.ui.Figure
+        fileMenu                    matlab.ui.container.Menu
+        UploadVideoMenu             matlab.ui.container.Menu
+        UploadImagesMenu            matlab.ui.container.Menu
+        UploadDataMenu              matlab.ui.container.Menu
+        SaveDataMenu                matlab.ui.container.Menu
+        SaveFiguresMenu             matlab.ui.container.Menu
+        toolsMenu                   matlab.ui.container.Menu
+        TrendPlotsMenu              matlab.ui.container.Menu
+        GridLayout                  matlab.ui.container.GridLayout
+        LeftPanel                   matlab.ui.container.Panel
+        DrawROIButton               matlab.ui.control.Button
+        DrawMidlineButton           matlab.ui.control.Button
+        StartFrameEditFieldLabel    matlab.ui.control.Label
+        StartFrameEditField         matlab.ui.control.EditField
+        EndFrameEditFieldLabel      matlab.ui.control.Label
+        EndFrameEditField           matlab.ui.control.EditField
+        DetectMucosalWaveButton     matlab.ui.control.Button
+        PrevFrameButton             matlab.ui.control.Button
+        NextFrameButton             matlab.ui.control.Button
+        RotateSpinnerLabel          matlab.ui.control.Label
+        RotateSpinner               matlab.ui.control.Spinner
+        CenterPanel                 matlab.ui.container.Panel
+        displayedImage              matlab.ui.control.UIAxes
+        ScanninglinepositionSliderLabel  matlab.ui.control.Label
+        ScanninglinepositionSlider  matlab.ui.control.Slider
+        RightPanel                  matlab.ui.container.Panel
+        leftFold                    matlab.ui.control.UIAxes
+        rightFold                   matlab.ui.control.UIAxes
+    end
+
+    % Properties that correspond to apps with auto-reflow
+    properties (Access = private)
+        onePanelWidth = 576;
+        twoPanelWidth = 768;
+    end
+
+    
+    properties (Access = private)
+        images = []; % list of image frames from the video
+        currImgIndex = 1;% current index of image displayed in the list
+        
+        ROI = [] % region of interest to scan for edge detection
+        midline = [] % center line between the two folds
+        scanStrt = NaN % start of scanning line for mucosal wave detection
+        scanFin = NaN% end of scanning line for mucosal wave detection
+        
+        
+        mucWaves = mucosalWave(); % holds all of the mucosal waves
+    end
+    
+    methods (Access = private)
+        
+        function results = updateImage(app, image)
+            %rotate the image
+            image = imrotate(image,app.RotateSpinner.Value);
+            
+            imshow(image,'Parent', app.displayedImage);
+           
+            
+        end
+        
+        %detects edges and automates mucosal wave from the kymogram
+        function retObj = autoMucosalWave(app,kymogram,midline)
+            
+            I = double(kymogram);
+            %mask applied to the image for edge detection
+            mask=[0, -1,-1, -1, -1;...
+                  1,  0,-1, -1, -1;...
+                  1,  1, 0, -1, -1;...
+                  1,  1, 1,  0, -1;...
+                  1,  1, 1,  1,  0];
+            maskSize = 2;
+%             mask= [0, -1,-1;...
+%                   1,  0,-1; ...
+%                   1,  1, 0];
+%               mask= [-1, -1,-1;...
+%                   0,  0,0; ...
+%                   1,  1, 1];
+%             maskSize = 1;
+            In = I;
+            % all of the return values for the method and errors
+            f1err = inf;
+            retf1 = [];
+            retltd = [];
+            f2err = inf;
+            retf2 = [];
+            retlbd = [];
+            f3err = inf;
+            retf3 = [];
+            retrtd = [];
+            f4err = inf;
+            retf4 = [];
+            retrbd = [];
+            x = [];
+            
+            % preallocating arrays for speedc
+            IprincBot = zeros(size(I,1)-5, size(I,2)-5);
+            IprincTop = zeros(size(I,1)-5, size(I,2)-5);
+            IsecTop = zeros(size(I,1)-5, size(I,2)-5); 
+            IsecBot = zeros(size(I,1)-5, size(I,2)-5);
+            for thresh = 150:40:470
+                %detect principal edges
+                for i=3:size(I, 1)-2
+                    for j=3:size(I, 2)-2
+                        neighbour_matrix=mask.*In(i-maskSize:i+maskSize, j-maskSize:j+maskSize); 
+                        avg_value=sum(neighbour_matrix(:)); 
+                        if avg_value > thresh
+                            IprincBot(i, j) = 255;
+                            IprincTop(i,j) = 0;
+                        elseif avg_value < thresh*-1
+                            IprincTop(i,j) = 255;
+                            IprincBot(i, j) = 0;
+                        else
+                            IprincBot(i, j) = 0;
+                            IprincTop(i,j) = 0;
+                        end
+                    end 
+                end 
+                
+                %detect secondary edges
+                mask2=rot90(mask)%[1, 1, 0 ,0 , 0;1, 0, 0, 0, 0;0,0,0,0,0;0,0,0,0,-1;0,0,0,  -1, -1]; 
+                for i=3:size(I, 1)-2
+                    for j=3:size(I, 2)-2
+                        neighbour_matrix=mask2.*In(i-maskSize:i+maskSize, j-maskSize:j+maskSize); 
+                        avg_value=sum(neighbour_matrix(:)); 
+                        if avg_value > thresh
+                            IsecBot(i, j) = 255;
+                            IsecTop(i,j) = 0;
+                        elseif avg_value < thresh*-1
+                            IsecTop(i,j) = 255;
+                            IsecBot(i, j) = 0;
+                        else
+                            IsecBot(i, j) = 0;
+                            IsecTop(i,j) = 0;
+                        end
+                    end 
+                end
+                %size of image
+                [r,c] = size(IprincTop);
+                figure(69);
+                hold on
+                subplot(2,2,1);imshow(IprincTop);
+                subplot(2,2,2);imshow(IsecTop);
+                subplot(2,2,3);imshow(IprincBot);
+                subplot(2,2,4);imshow(IsecBot);
+                hold off
+                %this creates plots for the left fold "top in picture
+                leftBottomLip = zeros(1,c);
+                leftTopLip = zeros(1,c);
+                
+                %these loops plot the edges as a set of data.
+                for i=1:c
+                    avg_bot = [];
+                    avg_top = [];
+                    numBot = 0;
+                    numTop = 0;
+                    for j=1:midline
+                        if IprincTop(j,i) == 255
+                            numBot = numBot + 1;
+                            avg_bot = [avg_bot  j];
+                        end
+                        if IsecTop(j,i) == 255
+                            numTop = numTop + 1;
+                            avg_top = [avg_top  j];
+                        end
+                        
+                    end
+                    
+                    if numBot ~= 0
+                        leftBottomLip(i) = median(avg_bot);
+                    else
+                        leftBottomLip(i) = NaN;
+                    end
+                    
+                    if numTop ~= 0
+                        leftTopLip(i) = median(avg_top);
+                    else
+                        leftTopLip(i) = NaN;
+                    end
+                end
+                %this creates plots for the left fold "top in picture
+                rightBottomLip = zeros(1,c);
+                rightTopLip = zeros(1,c);
+                for i=1:c
+                    avg_bot = [];
+                    avg_top = [];
+                    numBot = 0;
+                    numTop = 0;
+                    for j=midline:r
+                        if IprincBot(j,i) == 255
+                            numBot = numBot + 1;
+                            avg_bot = [avg_bot  j];
+                        end
+                        if IsecBot(j,i) == 255
+                            numTop = numTop + 1;
+                            avg_top = [avg_top  j];
+                        end
+                        
+                    end
+                    
+                    if numBot ~= 0
+                        rightBottomLip(i) = median(avg_bot);
+                    else
+                        rightBottomLip(i) = NaN;
+                    end
+                    
+                    if numTop ~= 0
+                        rightTopLip(i) = median(avg_top);
+                    else
+                        rightTopLip(i) = NaN;
+                    end
+                end 
+                x = 1:1:c;
+                %fit Left Top Lip
+%                 t = ~isnan(x) & ~isnan(leftTopLip);
+%                 t2 = ~isnan(x) & ~isnan(leftBottomLip);
+%                 t3 = ~isnan(x) & ~isnan(rightTopLip);
+%                 t4 = ~isnan(x) & ~isnan(rightBottomLip);
+%                 if nnz(t) >= 4 & nnz(t2) >= 4 & nnz(t3) >= 4 & nnz(t4) >= 4
+%                     [f1,gof1] = fit(x(t)',leftTopLip(t)','fourier1');
+%                     [f2,gof2] = fit(x(t2)',leftBottomLip(t2)','fourier1');
+%                     [f3,gof3] = fit(x(t3)',rightTopLip(t3)','fourier1');
+%                     [f4,gof4] = fit(x(t4)',rightBottomLip(t4)','fourier1');
+%                     if mean([gof2.rmse,gof1.rmse, gof3.rmse,gof4.rmse]) < mean([f1err,f2err,f3err,f4err])
+%                         retf1 = f1;
+%                         f1err = gof1.rmse;
+%                         retf2 = f2;
+%                         f2err = gof2.rmse;
+%                         retf3 = f3;
+%                         f3err = gof3.rmse;
+%                         retf4 = f4;
+%                         f4err = gof4.rmse;
+%                         retObj = mucosalWave(retf1, leftTopLip, retf2, leftBottomLip, retf3, rightTopLip, retf4, rightBottomLip, x);
+%                         retObj.plot();
+%                     end
+%                     
+%                 end
+                %retObj = mucosalWave(retf1, rightTopLip, retf2, rightBottomLip, retf3, leftTopLip, retf4, leftBottomLip, x);
+                t = ~isnan(x) & ~isnan(leftTopLip);
+                if nnz(t) >= size(t)/4
+                    [f1,gof1] = fit(x(t)',leftTopLip(t)','fourier1');
+                    if gof1.rmse < f1err
+                        f1err = gof1.rmse;
+                        retf1 = f1;
+                        retltd = leftTopLip;
+                    end
+                end
+% 
+%               %fit Left bottom Lip
+                t = ~isnan(x) & ~isnan(leftBottomLip);
+                if nnz(t) >= size(t)/4
+                    [f2,gof2] = fit(x(t)',leftBottomLip(t)','fourier1');
+                    if gof2.rmse < f2err
+                        f2err = gof2.rmse;
+                        retf2 = f2;
+                        retlbd = leftBottomLip;
+                    end
+                end
+                
+                %fit right Top Lip
+                t = ~isnan(x) & ~isnan(rightTopLip);
+                if nnz(t) >= size(t)/4
+                    [f3,gof3] = fit(x(t)',rightTopLip(t)','fourier1');
+                    if gof3.rmse < f3err
+                        f3err = gof3.rmse;
+                        retf3 = f3;
+                        retrtd = rightTopLip;
+                    end
+                end
+                
+                %fit Left bottom Lip
+                t = ~isnan(x) & ~isnan(rightBottomLip);
+                if nnz(t) >= size(t)/4
+                    [f4,gof4] = fit(x(t)',rightBottomLip(t)','fourier1');
+                    if gof4.rmse < f4err
+                        f4err = gof4.rmse;
+                        retf4 = f4;
+                        retrbd = rightBottomLip;
+                    end
+                end
+
+            end
+            
+            %retObj = mucosalWave(retf1,retrtd,retf2,retrbd,retf3,retltd,retf4,retlbd,x);
+            retObj = mucosalWave(retf3,retrtd,retf4,retrbd,retf1,retltd,retf2,retlbd,x)
+        end
+        
+        
+        %obtains a kymogram for a scanning line
+        function kymo = createKymo(app, scanningLine)
+            numFrames = size(app.images);
+            numFrames = numFrames(4);
+            start = round(app.ROI.Position(2));
+            finish = round(app.ROI.Position(2) + app.ROI.Position(4));
+            startFram = str2num(app.StartFrameEditField.Value);
+            endFram = str2num(app.EndFrameEditField.Value);
+            kymo = [[]];
+            for i = startFram:1:endFram
+                currimg = imrotate(app.images(:,:,:,i),app.RotateSpinner.Value);
+                for j = start:1:finish
+                    kymo((j-start+1),(i-startFram+1)) = currimg(j,scanningLine);
+                end
+            end
+            kymo = uint8(kymo);
+            
+            figure(2);imshow(kymo)
+        end
+        
+        
+        function results = updatePlots(app, currWave)
+            try
+               
+                    hold on
+                    plot(app.leftFold,currWave.xdata,feval(currWave.leftTopPlot, currWave.xdata), 'b' , ...
+                        currWave.xdata ,currWave.leftTopData, 'bo',...
+                        currWave.xdata, feval(currWave.leftBottomPlot, currWave.xdata), 'r',...
+                        currWave.xdata, currWave.leftBottomData, 'ro');
+%                      plot( app.leftFold,currWave.xdata, feval(currWave.leftBottomPlot, curWave.xdata), 'r',...
+%                          currWave.xdata, currWave.leftBottomData, 'ro');
+                    legend(app.leftFold,"top fit","top data", "bottom fit", "bottom data");
+                    hold off
+                    
+                    hold on
+                    plot(app.rightFold,currWave.xdata, feval(currWave.rightTopPlot, currWave.xdata), 'b' , ...
+                        currWave.xdata ,currWave.rightTopData, 'bo',...
+                        currWave.xdata, feval(currWave.rightBottomPlot, currWave.xdata), 'r',...
+                        currWave.xdata, currWave.rightBottomData, 'ro');
+%                      plot( app.rightFold,currWave.xdata, feval(currWave.rightBottomPlot, currWave.xdata), 'r',...
+%                          currWave.xdata, currWave.rightBottomData, 'ro');
+                    legend(app.rightFold, "top fit","top data", "bottom fit", "bottom data");
+                    hold off
+                    results = 0;
+            catch
+                results = -1;
+            end
+                
+        
+        end
+    end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Menu selected function: UploadVideoMenu
+        function uploadVideo(app, event)
+            try 
+                name = 1;
+                folder_name = uigetdir;
+                addpath(genpath(folder_name));
+                path = [folder_name filesep];
+                video = dir([path '*.avi']);
+                reader = VideoReader(video.name); 
+                
+                %save_path = [path filesep 'pics' filesep];
+                %save = mkdir(save_path);
+                %if save ~= 1
+                 %   errordlg("Error: could not create Image path 'pics'");
+                %end
+                
+                %app.outputPath = [path filesep 'saves' filesep];
+                %out = mkdir(app.outputPath);
+                %if out ~= 1
+                %    errordlg("Error: could not create output path");
+                   
+                %end
+                
+                %create a wait bar
+                numFrames = ceil(reader.FrameRate * reader.Duration);
+%                 d = uiprogressdlg(app.UIFigure,'Title','Please Wait','Message',...
+%                     'Step 1 of 2: Splitting Video Frames');
+%                 hbar = v4_parfor_progressbar(numFrames);
+%                 tempImages = [];
+%                 parfor i = 1:numFrames;
+%                      if (hasFrame(reader)) %&& name <= 200
+%                          img = readFrame(reader);
+%                    %     img = rgb2gray(img);
+%                     %     imwrite(img,[save_path 'PIC' num2str(name) '.png']);
+%                          %update wait bar
+%                          %name = name+1;
+%                          %d.Value= i/(numFrames*2);
+%                          tempImages(i) = image(img);
+%                          hbar.increment();
+%                          
+%                      end
+%                 end
+                app.images = read(reader);
+%                 close(hbar);
+%                 listing = dir(save_path);
+%                 % remove imaginary folders that start with '.'
+%                 for k = length(listing):-1:1
+%                     if listing(k).name == '.'
+%                          listing(k)=[];
+%                      elseif listing(k).isdir
+%                          listing(k)=[];
+%                     end
+%                 end
+%                 app.images = {listing.name};
+%                 for k = length(app.images):-1:1
+%                     d.Value = (length(app.images)-k+name)/(numFrames*2);
+%                     d.Message = 'Step 2 of 2: Saving Images';
+%                     app.images{k} = [listing(k).folder filesep listing(k).name];
+%                 end
+                
+                %display first image in axes
+                app.updateImage(app.images(:,:,:,app.currImgIndex));
+                
+                %update the frame edit field values
+                app.StartFrameEditField.Value = '1';
+                numFrames = size(app.images);
+                numFrames = numFrames(4);
+                app.EndFrameEditField.Value = num2str(numFrames);
+                
+            catch  exception
+                disp(exception)
+            end
+        end
+
+        % Value changed function: RotateSpinner
+        function setRotation(app, event)
+            value = app.RotateSpinner.Value;
+            app.updateImage(app.images(:,:,:,app.currImgIndex));
+        end
+
+        % Button pushed function: PrevFrameButton
+        function prevFrame(app, event)
+            if (app.currImgIndex > 1)
+                app.currImgIndex = app.currImgIndex - 1;
+            end
+            app.updateImage(app.images(:,:,:,app.currImgIndex));
+        end
+
+        % Button pushed function: NextFrameButton
+        function nextFrame(app, event)
+            numFrames = size(app.images);
+            numFrames = numFrames(4);
+                
+            if (app.currImgIndex < numFrames)
+                app.currImgIndex = app.currImgIndex + 1;
+            end
+            app.updateImage(app.images(:,:,:,app.currImgIndex));
+        end
+
+        % Button pushed function: DrawROIButton
+        function drawROI(app, event)
+            %delete box if already drawn
+           if ~isempty(app.ROI)
+                delete(app.ROI);
+           end
+           
+           app.ROI = drawrectangle(app.displayedImage);
+        end
+
+        % Button pushed function: DrawMidlineButton
+        function drawMidline(app, event)
+           %delete box if already drawn
+           if ~isempty(app.midline)
+                delete(app.midline);
+           end
+           app.midline = drawline(app.displayedImage);
+           
+           %make the line horizontal
+           yAvg = mean(app.midline.Position(:,2));
+           app.midline.Position(1,2) = yAvg;
+           app.midline.Position(2,2) = yAvg;
+           
+           %set the scanning line position bar
+           x1 = round(app.midline.Position(1,1));
+           x2 = round(app.midline.Position(2,1));
+           app.ScanninglinepositionSlider.Limits = [0,(x2-x1)];
+           app.ScanninglinepositionSlider.Value = (x2-x1);
+           app.scanStrt = x1;
+           app.scanFin = x2;
+            
+        end
+
+        % Button pushed function: DetectMucosalWaveButton
+        function detectMucosalWaves(app, event)
+            size = app.scanFin - app.scanStrt;
+            %app.mucWaves(size) = mucosalWave(0,0,0,0,0,0,0,0,0);
+            
+            % make countdown of processing time
+            f = waitbar(0,'1','Name','Detecting Waves...');
+            set(f, 'Position', [1 1 275 75]);
+            movegui(f,'center');
+            
+            % update timer info
+            boxflg = 1;
+            timeest = [];
+            
+            % iterate through each grid location that holds a collection of tracked
+            % points
+            for i=app.scanStrt:1:app.scanFin
+                % update timer countdown
+                tic
+                guesstime = mean(timeest);
+                estimatetime = guesstime*(size-boxflg);
+                estMin = floor(estimatetime/60);
+                estSec = mod(estimatetime,60);
+                waitbar((i-app.scanStrt)/size,f,{'Please wait...',...
+                    ['Estimated time remaining: ',num2str(estMin), ' minutes, ', num2str(estSec), ' seconds']});
+                
+                % DO CALCULATION
+                kymo = app.createKymo(i);
+                midline = round((app.ROI.Position(2) + app.ROI.Position(4)) - app.midline.Position(1,2));
+                waveToAdd = app.autoMucosalWave(kymo, midline);
+                %       waveToAdd.plot();
+                
+                
+                if i == 1
+                    app.mucWaves(i) = waveToAdd;
+                else
+                    app.mucWaves = [app.mucWaves waveToAdd];
+                end
+                
+                % update timer countdown
+                boxflg = boxflg +1;
+                timeest = [timeest, toc];
+            end
+            delete(f)
+            
+            %set slider to middle of scannning line
+            app.ScanninglinepositionSlider.Value = round(size/2);
+            %call method to create plots
+            suc = app.updatePlots(app.mucWaves(app.ScanninglinepositionSlider.Value));
+            
+        end
+
+        % Value changed function: ScanninglinepositionSlider
+        function updateKymoLine(app, event)
+            %updates the plots for the scanning line on the right side
+            value = app.ScanninglinepositionSlider.Value;
+            app.updatePlots(app.mucWaves(round(value)));
+        end
+
+        % Menu selected function: SaveDataMenu
+        function saveData(app, event)
+            %saves the data to not require detecting mucwaves 
+            %to see old data
+            mucWaves = app.mucWaves;
+            images = app.images;
+            midline = app.midline;
+            ROI = app.ROI;
+            
+            %get the date str
+            date = now;
+            date = datetime(date,'ConvertFrom','datenum');
+            date = datestr(date,'dd_mm_yyyy_hh_ss');
+            [folder] = uigetdir();
+            date = strcat(folder, filesep, "autoMucWave_", date);
+            
+            %save the file to 
+            save(date, 'mucWaves', 'images','midline', 'ROI');
+            
+        end
+
+        % Menu selected function: UploadDataMenu
+        function loadData(app, event)
+            %load old data into workspace and save it in app
+            [baseName, folder] = uigetfile();
+            fullFileName = fullfile(folder, baseName);
+            load(fullFileName);
+            app.mucWaves = mucWaves;
+            app.midline = midline
+            app.ROI = ROI;
+            app.images = images;
+            
+            %update displayed data
+            app.updatePlots(round(app.ScanninglinepositionSlider.Value));
+            app.updateImage(app.images(1));
+%             drawrectangle(app.displayedImage, 'Position', app.ROI.Position);
+%             drawline(app.displayedImage, 'Position', ...
+%                 app.midline.Position);
+            
+            
+            
+        end
+
+        % Menu selected function: TrendPlotsMenu
+        function trendPlots(app, event)
+            % function to plot trends accross the midline for both folds
+            % top and bottom lips
+            close all;
+            pos = 2:1:length(app.mucWaves);
+            ampLeftTop = zeros(1,length(app.mucWaves) - 1);
+            ampLeftBot = zeros(1,length(app.mucWaves) - 1);
+            ampRightTop = zeros(1,length(app.mucWaves) - 1);
+            ampRightBot = zeros(1,length(app.mucWaves) - 1);
+            phaseLeftTop = zeros(1,length(app.mucWaves) - 1);
+            phaseLeftBot = zeros(1,length(app.mucWaves) - 1);
+            phaseRightTop = zeros(1,length(app.mucWaves) - 1);
+            phaseRightBot = zeros(1,length(app.mucWaves) - 1);
+            phaseDiffLeft = zeros(1,length(app.mucWaves) - 1);
+            phaseDiffRight = zeros(1,length(app.mucWaves) - 1);
+            
+            for i = 2:1:length(app.mucWaves)
+                %calculate phase and phase  differnece for right fold
+                phaseRightTop(i-1) = ...
+                    atan(app.mucWaves(i).rightTopPlot.a1 / app.mucWaves(i).rightTopPlot.b1);
+                phaseRightBot(i-1) = ...
+                    atan(app.mucWaves(i).rightBottomPlot.a1 / app.mucWaves(i).rightBottomPlot.b1);
+                phaseDiffRight(i-1) = phaseRightTop(i-1) - phaseRightBot(i-1);
+                
+                %calculate amp for right lips
+                ampRightTop(i-1) = ...
+                    sqrt(app.mucWaves(i).rightTopPlot.a1^2 + app.mucWaves(i).rightTopPlot.b1^2);
+                ampRightBot(i-1) = ...
+                    sqrt(app.mucWaves(i).rightBottomPlot.a1^2 + app.mucWaves(i).rightBottomPlot.b1^2);
+                
+                %calculate phase and phase  differnece for left fold
+                phaseLeftTop(i-1) = ...
+                    atan(app.mucWaves(i).leftTopPlot.a1 / app.mucWaves(i).leftTopPlot.b1);
+                phaseLeftBot(i-1) = ...
+                    atan(app.mucWaves(i).leftBottomPlot.a1 / app.mucWaves(i).leftBottomPlot.b1);
+                phaseDiffLeft(i-1) = phaseLeftTop(i-1) - phaseLeftBot(i-1);
+                
+                %calculate amp for left lips
+                ampLeftTop(i-1) = ...
+                    sqrt(app.mucWaves(i).leftTopPlot.a1^2 + app.mucWaves(i).leftTopPlot.b1^2);
+                ampLeftBot(i-1) = ...
+                    sqrt(app.mucWaves(i).leftBottomPlot.a1^2 + app.mucWaves(i).leftBottomPlot.b1^2);
+            end
+            %plot right amplitudes
+            figure(1);
+            hold on;
+            plot(pos,ampRightTop,"-r",pos,ampRightBot, "-b");
+            legend("Right Top Lip", "Right Bottom Lip")
+            title("Amplitude of right top and bottom lip vs postion");
+            xlabel("Position Posterior->Anterior (Pixels)");
+            ylabel("Amplitude (Pixels)");
+            hold off;
+            
+            %plot left amplitudes
+            figure(2);
+            hold on;
+            plot(pos,ampLeftTop,"-r",pos, ampLeftBot, "-b");
+            legend("Left Top Lip", "Left Bottom Lip")
+            title("Amplitude of Left Top and Bottom lip vs postion");
+            xlabel("Position Posterior->Anterior (Pixels)");
+            ylabel("Amplitude (Pixels)");
+            hold off;
+            
+            %plot left phases
+            figure(3);
+            hold on;
+            plot(pos,phaseLeftTop,"-r",pos, phaseLeftBot, "-b");
+            legend("Left Top Lip", "Left Bottom Lip")
+            title("Phase of Left Top and Bottom lip vs postion");
+            xlabel("Position Posterior->Anterior (Pixels)");
+            ylabel("Phase (radians)");
+            hold off;
+            
+            %plot right phases
+            figure(4);
+            hold on;
+            plot(pos,phaseRightTop,"-r",pos, phaseRightBot, "-b");
+            legend("Right Top Lip", "Right Bottom Lip")
+            title("Phase of Right Top and Bottom lip vs postion");
+            xlabel("Position Posterior->Anterior (Pixels)");
+            ylabel("Phase (radians)");
+            hold off;
+            
+            %plot phase difference
+            figure(5);
+            hold on;
+            plot(pos,phaseDiffRight,"-r",pos, phaseDiffLeft, "-b");
+            legend("Right Fold", "Left Fold")
+            title("Phase difference of Right Top and Bottom lip vs postion");
+            xlabel("Position Posterior->Anterior (Pixels)");
+            ylabel("Phase difference (radians)");
+            hold off;
+            
+            
+            
+        end
+
+        % Changes arrangement of the app based on UIFigure width
+        function updateAppLayout(app, event)
+            currentFigureWidth = app.UIFigure.Position(3);
+            if(currentFigureWidth <= app.onePanelWidth)
+                % Change to a 3x1 grid
+                app.GridLayout.RowHeight = {480, 480, 480};
+                app.GridLayout.ColumnWidth = {'1x'};
+                app.CenterPanel.Layout.Row = 1;
+                app.CenterPanel.Layout.Column = 1;
+                app.LeftPanel.Layout.Row = 2;
+                app.LeftPanel.Layout.Column = 1;
+                app.RightPanel.Layout.Row = 3;
+                app.RightPanel.Layout.Column = 1;
+            elseif (currentFigureWidth > app.onePanelWidth && currentFigureWidth <= app.twoPanelWidth)
+                % Change to a 2x2 grid
+                app.GridLayout.RowHeight = {480, 480};
+                app.GridLayout.ColumnWidth = {'1x', '1x'};
+                app.CenterPanel.Layout.Row = 1;
+                app.CenterPanel.Layout.Column = [1,2];
+                app.LeftPanel.Layout.Row = 2;
+                app.LeftPanel.Layout.Column = 1;
+                app.RightPanel.Layout.Row = 2;
+                app.RightPanel.Layout.Column = 2;
+            else
+                % Change to a 1x3 grid
+                app.GridLayout.RowHeight = {'1x'};
+                app.GridLayout.ColumnWidth = {215, '1x', 282};
+                app.LeftPanel.Layout.Row = 1;
+                app.LeftPanel.Layout.Column = 1;
+                app.CenterPanel.Layout.Row = 1;
+                app.CenterPanel.Layout.Column = 2;
+                app.RightPanel.Layout.Row = 1;
+                app.RightPanel.Layout.Column = 3;
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.AutoResizeChildren = 'off';
+            app.UIFigure.Position = [100 100 860 480];
+            app.UIFigure.Name = 'UI Figure';
+            app.UIFigure.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
+
+            % Create fileMenu
+            app.fileMenu = uimenu(app.UIFigure);
+            app.fileMenu.Text = 'File';
+
+            % Create UploadVideoMenu
+            app.UploadVideoMenu = uimenu(app.fileMenu);
+            app.UploadVideoMenu.MenuSelectedFcn = createCallbackFcn(app, @uploadVideo, true);
+            app.UploadVideoMenu.Text = 'Upload Video';
+
+            % Create UploadImagesMenu
+            app.UploadImagesMenu = uimenu(app.fileMenu);
+            app.UploadImagesMenu.Text = 'Upload Images';
+
+            % Create UploadDataMenu
+            app.UploadDataMenu = uimenu(app.fileMenu);
+            app.UploadDataMenu.MenuSelectedFcn = createCallbackFcn(app, @loadData, true);
+            app.UploadDataMenu.Text = 'Upload Data';
+
+            % Create SaveDataMenu
+            app.SaveDataMenu = uimenu(app.fileMenu);
+            app.SaveDataMenu.MenuSelectedFcn = createCallbackFcn(app, @saveData, true);
+            app.SaveDataMenu.Text = 'Save Data';
+
+            % Create SaveFiguresMenu
+            app.SaveFiguresMenu = uimenu(app.fileMenu);
+            app.SaveFiguresMenu.Text = 'Save Figures';
+
+            % Create toolsMenu
+            app.toolsMenu = uimenu(app.UIFigure);
+            app.toolsMenu.Text = 'Tools';
+
+            % Create TrendPlotsMenu
+            app.TrendPlotsMenu = uimenu(app.toolsMenu);
+            app.TrendPlotsMenu.MenuSelectedFcn = createCallbackFcn(app, @trendPlots, true);
+            app.TrendPlotsMenu.Text = 'Trend Plots';
+
+            % Create GridLayout
+            app.GridLayout = uigridlayout(app.UIFigure);
+            app.GridLayout.ColumnWidth = {215, '1x', 282};
+            app.GridLayout.RowHeight = {'1x'};
+            app.GridLayout.ColumnSpacing = 0;
+            app.GridLayout.RowSpacing = 0;
+            app.GridLayout.Padding = [0 0 0 0];
+            app.GridLayout.Scrollable = 'on';
+
+            % Create LeftPanel
+            app.LeftPanel = uipanel(app.GridLayout);
+            app.LeftPanel.Layout.Row = 1;
+            app.LeftPanel.Layout.Column = 1;
+
+            % Create DrawROIButton
+            app.DrawROIButton = uibutton(app.LeftPanel, 'push');
+            app.DrawROIButton.ButtonPushedFcn = createCallbackFcn(app, @drawROI, true);
+            app.DrawROIButton.Position = [110 290 100 22];
+            app.DrawROIButton.Text = 'Draw ROI';
+
+            % Create DrawMidlineButton
+            app.DrawMidlineButton = uibutton(app.LeftPanel, 'push');
+            app.DrawMidlineButton.ButtonPushedFcn = createCallbackFcn(app, @drawMidline, true);
+            app.DrawMidlineButton.Position = [5 290 100 22];
+            app.DrawMidlineButton.Text = 'Draw Midline';
+
+            % Create StartFrameEditFieldLabel
+            app.StartFrameEditFieldLabel = uilabel(app.LeftPanel);
+            app.StartFrameEditFieldLabel.HorizontalAlignment = 'right';
+            app.StartFrameEditFieldLabel.Position = [3 361 69 22];
+            app.StartFrameEditFieldLabel.Text = 'Start Frame';
+
+            % Create StartFrameEditField
+            app.StartFrameEditField = uieditfield(app.LeftPanel, 'text');
+            app.StartFrameEditField.Position = [87 361 100 22];
+
+            % Create EndFrameEditFieldLabel
+            app.EndFrameEditFieldLabel = uilabel(app.LeftPanel);
+            app.EndFrameEditFieldLabel.HorizontalAlignment = 'right';
+            app.EndFrameEditFieldLabel.Position = [5 325 65 22];
+            app.EndFrameEditFieldLabel.Text = 'End Frame';
+
+            % Create EndFrameEditField
+            app.EndFrameEditField = uieditfield(app.LeftPanel, 'text');
+            app.EndFrameEditField.Position = [85 325 100 22];
+
+            % Create DetectMucosalWaveButton
+            app.DetectMucosalWaveButton = uibutton(app.LeftPanel, 'push');
+            app.DetectMucosalWaveButton.ButtonPushedFcn = createCallbackFcn(app, @detectMucosalWaves, true);
+            app.DetectMucosalWaveButton.Position = [44 32 132 22];
+            app.DetectMucosalWaveButton.Text = 'Detect Mucosal Wave';
+
+            % Create PrevFrameButton
+            app.PrevFrameButton = uibutton(app.LeftPanel, 'push');
+            app.PrevFrameButton.ButtonPushedFcn = createCallbackFcn(app, @prevFrame, true);
+            app.PrevFrameButton.Position = [5 393 100 22];
+            app.PrevFrameButton.Text = 'Prev Frame';
+
+            % Create NextFrameButton
+            app.NextFrameButton = uibutton(app.LeftPanel, 'push');
+            app.NextFrameButton.ButtonPushedFcn = createCallbackFcn(app, @nextFrame, true);
+            app.NextFrameButton.Position = [110 393 100 22];
+            app.NextFrameButton.Text = 'Next Frame';
+
+            % Create RotateSpinnerLabel
+            app.RotateSpinnerLabel = uilabel(app.LeftPanel);
+            app.RotateSpinnerLabel.HorizontalAlignment = 'right';
+            app.RotateSpinnerLabel.Position = [34 448 41 22];
+            app.RotateSpinnerLabel.Text = 'Rotate';
+
+            % Create RotateSpinner
+            app.RotateSpinner = uispinner(app.LeftPanel);
+            app.RotateSpinner.Limits = [-180 180];
+            app.RotateSpinner.ValueChangedFcn = createCallbackFcn(app, @setRotation, true);
+            app.RotateSpinner.Position = [90 448 100 22];
+
+            % Create CenterPanel
+            app.CenterPanel = uipanel(app.GridLayout);
+            app.CenterPanel.Layout.Row = 1;
+            app.CenterPanel.Layout.Column = 2;
+
+            % Create displayedImage
+            app.displayedImage = uiaxes(app.CenterPanel);
+            title(app.displayedImage, 'Title')
+            xlabel(app.displayedImage, 'X')
+            ylabel(app.displayedImage, 'Y')
+            app.displayedImage.Position = [6 72 328 322];
+
+            % Create ScanninglinepositionSliderLabel
+            app.ScanninglinepositionSliderLabel = uilabel(app.CenterPanel);
+            app.ScanninglinepositionSliderLabel.HorizontalAlignment = 'right';
+            app.ScanninglinepositionSliderLabel.Position = [147 14 122 22];
+            app.ScanninglinepositionSliderLabel.Text = 'Scanning line position';
+
+            % Create ScanninglinepositionSlider
+            app.ScanninglinepositionSlider = uislider(app.CenterPanel);
+            app.ScanninglinepositionSlider.ValueChangedFcn = createCallbackFcn(app, @updateKymoLine, true);
+            app.ScanninglinepositionSlider.Position = [133 64 150 3];
+
+            % Create RightPanel
+            app.RightPanel = uipanel(app.GridLayout);
+            app.RightPanel.Layout.Row = 1;
+            app.RightPanel.Layout.Column = 3;
+
+            % Create leftFold
+            app.leftFold = uiaxes(app.RightPanel);
+            title(app.leftFold, 'Left Fold')
+            xlabel(app.leftFold, 'X')
+            ylabel(app.leftFold, 'Y')
+            app.leftFold.PlotBoxAspectRatio = [1.34615384615385 1 1];
+            app.leftFold.Position = [6 247 272 223];
+
+            % Create rightFold
+            app.rightFold = uiaxes(app.RightPanel);
+            title(app.rightFold, 'Right Fold')
+            xlabel(app.rightFold, 'X')
+            ylabel(app.rightFold, 'Y')
+            app.rightFold.PlotBoxAspectRatio = [1.34615384615385 1 1];
+            app.rightFold.Position = [11 14 270 209];
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = AutoMuceWave2000
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
