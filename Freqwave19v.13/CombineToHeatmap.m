@@ -45,6 +45,8 @@ for i=1:size(totalData,2)
         phase(i)=NaN;
     end
 end
+%Uncomment these to delete bad points. If too many are deleted though, we
+%won't get a plot!
 %amp(amp<0.01)=NaN;
 %freq(freq<0.01)=NaN;
 
@@ -78,6 +80,8 @@ end
 phaseY=abs(phaseX);
 
 %%Filter out bad points
+%Uncomment the two exclude lines, otherwise the block of code is pointless,
+%and no bad points are deleted. Temporarily commented for testing purposes.
 freqSquare=zeros(length(ampX),1);
 ampSquare=zeros(length(ampX),1);
 x=zeros(length(ampX),1);
@@ -112,40 +116,14 @@ dataY(:,exclude)=[];
 %Plotting prep
 close all
 image=input(1).Img;
-fiveMM=input(1).GPratio*5;
-xStart=mod(input(1).originPt(1),fiveMM);
-yStart=mod(input(1).originPt(2),fiveMM);
-currXTicks=xStart:fiveMM:size(image,2);
-currYTicks=yStart:fiveMM:size(image,1);
-xZero=find(currXTicks==input(1).originPt(1));
-xMMTickMat=5*(1-xZero:length(currXTicks)-xZero);
-xMMTickCell=cell(1,length(xMMTickMat));
-for i=1:length(xMMTickMat)
-    xMMTickCell(i)=num2cell(xMMTickMat(i));
-end
-yZero=find(currYTicks==input(1).originPt(2));
-yMMTickMat=5*(1-yZero:length(currYTicks)-yZero);
-yMMTickCell=cell(1,length(yMMTickMat));
-for i=1:length(yMMTickMat)
-    yMMTickCell(length(yMMTickMat)+1-i)=num2cell(yMMTickMat(i));
-end
+y=-y;
 pixelX=x.*input(1).GPratio;
 pixelY=y.*input(1).GPratio;
 normX=(pixelX+input(1).originPt(1))./size(image,2);
 normY=(pixelY+input(1).originPt(2))./size(image,1);
 contourSize=[min(normX),min(normY),range(normX),range(normY)];
-y=-y;
 [X,Y]=meshgrid(x,y);
 
-%Crop Image
-% if(size(image,2)<size(image,1))
-%     xDesired=round(size(image,2)/0.8125*0.6422/2);
-%     image=image(xDesired:end-xDesired,:);
-% else
-%     yDesired=round(size(image,1)/0.6422*0.8125/2);
-%     image=image(yDesired:end-yDesired,:);
-% end
-    
 
 
 % Create UIFigure and hide until all components are created
@@ -169,104 +147,86 @@ ampAx1=axes('Parent',ampUIPanel,'Visible','off');
 ampAx2=axes('Parent',ampUIPanel,'Visible','off');
 ampAx3=axes('Parent',ampUIPanel,'Visible','off');
 
+
+%Create amplitude axis
 I=imshow(image,'Parent',ampAx2);
 I.AlphaData=0.6;  %Transparency of image: [0,1]
+set(ampAx2, 'Units','normalized','Position',[0 0 1 1]);
 [~,c]=contourf(ampAx1,X,Y,Z,100);
 c.LineStyle='none';
 scatter(ampAx3,x,y,20,ampSquare,'x');
-title(ampAx2,'Amplitude');
-xlabel(ampAx2,'X Position (mm)');
-ylabel(ampAx2,'Y Position (mm)');
 ampAx1.Visible="off";
-ampAx2.XAxis.Visible="on";
-ampAx2.YAxis.Visible="on";
-xticks(ampAx2,currXTicks);
-yticks(ampAx2,currYTicks);
-xticklabels(ampAx2,xMMTickCell);
-yticklabels(ampAx2,yMMTickCell);
-ampAx2.Units='pixels';
-realPosition=ampAx2.Position;%Want to find actual normalized location of image w/i panel
+realPosition=ampUIPanel.Position;%Want to find actual normalized location of image w/i panel
+realPosition(1)=0;
+realPosition(2)=0;
 if(size(image,1)<size(image,2))
-    realPosition(2)=(ampAx2.Position(4)-ampAx2.Position(3))/2+ampAx2.Position(2);
-    realPosition(4)=ampAx2.Position(3);
+    ratio=realPosition(3)/size(image,2);
+    realPosition(4)=size(image,1)*ratio;
+    realPosition(2)=(ampUIPanel.Position(4)-realPosition(4))/2;
 else
-    realPosition(1)=(ampAx2.Position(3)-ampAx2.Position(4))/2+ampAx2.Position(1);
-    realPosition(3)=ampAx2.Position(4);
+    ratio=realPosition(4)/size(image,1);
+    realPosition(3)=size(image,2)*ratio;
+    realPosition(1)=(ampUIPanel.Position(3)-realPosition(3))/2;
 end
 realPosition(1)=realPosition(1)/ampUIPanel.Position(3);
 realPosition(2)=realPosition(2)/ampUIPanel.Position(4);
 realPosition(3)=realPosition(3)/ampUIPanel.Position(3);
 realPosition(4)=realPosition(4)/ampUIPanel.Position(4);
 
-set(ampAx1,'Units','normalized','Position',[realPosition(1)+contourSize(1)*realPosition(3),...
-    realPosition(2)+(1-contourSize(2)-contourSize(4))*realPosition(4),contourSize(3)*realPosition(3),contourSize(4)*realPosition(4)]);
-set(ampAx3,'Units','normalized','Position',ampAx1.Position);
-ampAx3.Color='none';
-ampAx1.Color='none';
-ampAx2.Units='normalized';
-ampAx3.Visible='off';
-colorbarPosition=ampAx2.Position;
+colorbarPosition=realPosition;
 colorbarPosition(1)=colorbarPosition(1)+colorbarPosition(3);
 colorbarPosition(3)=0.025;
 colorbar(ampAx3,'Units','normalized','Position',colorbarPosition);
 
+ampAx2.Position=[0 0 1 1];
+set(ampAx1,'Units','normalized','Position',[realPosition(1)+contourSize(1)*realPosition(3),...
+    realPosition(2)+(1-contourSize(2)-contourSize(4))*realPosition(4),contourSize(3)*realPosition(3),contourSize(4)*realPosition(4)]);
+set(ampAx3,'Units','normalized','Position',ampAx1.Position);
+ampAx3.Color='none';
+ampAx3.Visible='off';
+ampAx1.Color='none';
+
+%Create freq panel
 Z=griddata(x,y,freqSquare,X,Y);
 freqAx1=axes('Parent',freqUIPanel,'Visible','off');
 freqAx2=axes('Parent',freqUIPanel,'Visible','off');
 freqAx3=axes('Parent',freqUIPanel,'Visible','off');
 I=imshow(image,'Parent',freqAx2);
+set(freqAx2,'Units','normalized','Position',[0,0,1,1]);
 I.AlphaData=0.6;  %Transparency of image: [0,1]
 [~,c]=contourf(freqAx1,X,Y,Z,100);
 c.LineStyle='none';
 scatter(freqAx3,x,y,20,freqSquare,'x');
-title(freqAx2,'Frequency');
 freqAx1.Visible="off";
-freqAx2.XAxis.Visible="on";
-freqAx2.YAxis.Visible="on";
-xticks(freqAx2,currXTicks);
-yticks(freqAx2,currYTicks);
-xticklabels(freqAx2,xMMTickCell);
-yticklabels(freqAx2,yMMTickCell);
-xlabel(freqAx2,'X Position(mm)');
-ylabel(freqAx2,'Y Position(mm)');
+colorbar(freqAx3,'Units','normalized','Position',colorbarPosition);
+freqAx2.Position=[0 0 1 1];
 set(freqAx1,'Units','normalized','Position',ampAx1.Position);
 set(freqAx3,'Units','normalized','Position',ampAx1.Position);
 freqAx3.Color='none';
 freqAx3.Visible='off';
 freqAx1.Color='none';
-colorbarPosition=get(freqAx2,'Position');
-colorbarPosition(1)=colorbarPosition(1)+colorbarPosition(3);
-colorbarPosition(3)=0.025;
-colorbar(freqAx3,'Units','normalized','Position',colorbarPosition);
 
+%Create phase panel. 
+%Note that this is currently phase Y, could expirment w/ phaseX, or
+%phaseSquare
 Z=griddata(x,y,phaseY,X,Y);
 phaseAx1=axes('Parent',phaseUIPanel,'Visible','off');
 phaseAx2=axes('Parent',phaseUIPanel,'Visible','off');
 phaseAx3=axes('Parent',phaseUIPanel,'Visible','off');
 I=imshow(image,'Parent',phaseAx2);
+set(phaseAx2,'Units','normalized','Position',[0,0,1,1]);
 I.AlphaData=0.6;  %Transparency of image: [0,1]
 [~,c]=contourf(phaseAx1,X,Y,Z,100);
 c.LineStyle='none';
 scatter(phaseAx3,x,y,20,phaseY,'x');
-title(phaseAx2,'Phase');
 phaseAx1.Visible="off";
-phaseAx2.XAxis.Visible="on";
-phaseAx2.YAxis.Visible="on";
-xticks(phaseAx2,currXTicks);
-yticks(phaseAx2,currYTicks);
-xticklabels(phaseAx2,xMMTickCell);
-yticklabels(phaseAx2,yMMTickCell);
-xlabel(phaseAx2,'X Position(mm)');
-ylabel(phaseAx2,'Y Position(mm)');
+colorbar(phaseAx3,'Units','normalized','Position',colorbarPosition);
+phaseAx2.Position=[0 0 1 1];
 set(phaseAx1,'Units','normalized','Position',ampAx1.Position);
 set(phaseAx3,'Units','normalized','Position',ampAx1.Position);
 phaseAx3.Color='none';
 phaseAx3.Visible='off';
 phaseAx1.Color='none';
-colorbarPosition=get(phaseAx2,'Position');
-colorbarPosition(1)=colorbarPosition(1)+colorbarPosition(3);
-colorbarPosition(3)=0.025;
-colorbar(phaseAx3,'Units','normalized','Position',colorbarPosition);
 
 
 
@@ -314,7 +274,7 @@ P=[xTotalPixel,yTotalPixel];
 UIFigure.WindowButtonDownFcn=@(UIFigure,~)mouseClick(UIFigure,TextArea,...
     picBounds,P,dataX,-dataY,UIAxes1,UIAxes2,ampSquare,freqSquare,phaseY);
 
-
+    %Display in text area info about closest point
     function mouseClick(UIFigure,TextArea,picBounds,P,dataX,dataY,UIAxes1,UIAxes2,ampSquare,freqSquare,phaseY)
         click=UIFigure.CurrentPoint;
         if(click(1)>=picBounds(1)&&click(1)<=(picBounds(1)+picBounds(3)))
@@ -330,7 +290,7 @@ UIFigure.WindowButtonDownFcn=@(UIFigure,~)mouseClick(UIFigure,TextArea,...
         
     end
 
-
+    %Function for if you choose to look at a different panel
     function selection(dd,ampUIPanel,phaseUIPanel,freqUIPanel)
         val=dd.Value;
         ampUIPanel.Visible='off';
