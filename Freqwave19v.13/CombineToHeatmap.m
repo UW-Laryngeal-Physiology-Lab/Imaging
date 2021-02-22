@@ -131,6 +131,7 @@ UIFigure = uifigure('Visible', 'off');
 screenSize=get(0,'screensize');
 UIFigure.Position=screenSize;
 UIFigure.Name = 'UI Figure';
+UIFigure.WindowState = 'maximized';
 
 % Create ddLabel
 ddLabel = uilabel(UIFigure);
