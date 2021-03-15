@@ -142,13 +142,13 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
                 end
                 %size of image
                 [r,c] = size(IprincTop);
-                figure(69);
-                hold on
-                subplot(2,2,1);imshow(IprincTop);
-                subplot(2,2,2);imshow(IsecTop);
-                subplot(2,2,3);imshow(IprincBot);
-                subplot(2,2,4);imshow(IsecBot);
-                hold off
+%                 figure(69);
+%                 hold on
+%                 subplot(2,2,1);imshow(IprincTop);
+%                 subplot(2,2,2);imshow(IsecTop);
+%                 subplot(2,2,3);imshow(IprincBot);
+%                 subplot(2,2,4);imshow(IsecBot);
+%                 hold off
                 %this creates plots for the left fold "top in picture
                 leftBottomLip = zeros(1,c);
                 leftTopLip = zeros(1,c);
@@ -308,7 +308,7 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
             end
             kymo = uint8(kymo);
             
-            figure(2);imshow(kymo)
+            %figure(2);imshow(kymo)
         end
         
         
