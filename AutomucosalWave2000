@@ -630,7 +630,7 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
             hold on;
             plot(pos,ampRightTop,"-r",pos,ampRightBot, "-b");
             legend("Right Top Lip", "Right Bottom Lip")
-            title("Amplitude of right top and bottom lip vs postion");
+            title("Amplitude of Right top and bottom lip vs postion");
             xlabel("Position Posterior->Anterior (Pixels)");
             ylabel("Amplitude (Pixels)");
             hold off;
@@ -670,7 +670,7 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
             hold on;
             plot(pos,phaseDiffRight,"-r",pos, phaseDiffLeft, "-b");
             legend("Right Fold", "Left Fold")
-            title("Phase difference of Right Top and Bottom lip vs postion");
+            title("Phase difference of Right/Left Top and Bottom lips vs postion");
             xlabel("Position Posterior->Anterior (Pixels)");
             ylabel("Phase difference (radians)");
             hold off;
@@ -851,6 +851,7 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
             title(app.displayedImage, 'Title')
             xlabel(app.displayedImage, 'X')
             ylabel(app.displayedImage, 'Y')
+            app.displayedImage.PlotBoxAspectRatio = [1.05143721633888 1 1];
             app.displayedImage.Position = [6 72 328 322];
 
             % Create ScanninglinepositionSliderLabel
@@ -883,6 +884,7 @@ classdef AutoMuceWave2000 < matlab.apps.AppBase
             xlabel(app.rightFold, 'X')
             ylabel(app.rightFold, 'Y')
             app.rightFold.PlotBoxAspectRatio = [1.34615384615385 1 1];
+            app.rightFold.XTick = [0 0.5 1];
             app.rightFold.Position = [11 14 270 209];
 
             % Show the figure after all components are created
