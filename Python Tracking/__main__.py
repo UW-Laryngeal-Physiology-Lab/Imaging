@@ -7,15 +7,19 @@
 ################################################################################
 
 # necessary imports
+import sys
+import os
 import cv2
 from src import *
 
 # imports that may eventually go
 import numpy as np
 import time
-import sys
 
-NUM_FRAMES = 410
+################################################################################
+# Initialization
+################################################################################
+NUM_FRAMES = video.load('motion.avi')
 TEMPLATE_SIZE = 5                   # size of template image
 METHOD = cv2.TM_CCORR_NORMED        # image comparison technique
 SEARCH_MARGIN = 15                  # margin around known location to check
@@ -42,19 +46,16 @@ locations = process.track(templates, initialLocations, NUM_FRAMES,
 print("Processing is done!")
 
 ################################################################################
-# Graph generation
+# Graph generation and Motion display
 ################################################################################
 
 graphs.plotMotion(locations)
-
-################################################################################
-# Motion display
-################################################################################
-
 window.showMotion(locations, TEMPLATE_SIZE)
 
 ################################################################################
 # Program cleanup
 ################################################################################
 
+for i in range(NUM_FRAMES):
+    os.remove('./assets/pics/PIC' + str(i) + '.png')
 cv2.destroyAllWindows()
