@@ -17,7 +17,7 @@ def track(templates, initialLocations, NUM_FRAMES, SEARCH_MARGIN, METHOD):
 
     for i in range(NUM_FRAMES):
         # import fresh frame
-        frame = cv2.imread('./assets/pics/PIC' + str(i+1) 
+        frame = cv2.imread('./assets/pics/PIC' + str(i) 
             + '.png', cv2.IMREAD_GRAYSCALE)
         if frame is None:
             sys.exit("Could not read image.")

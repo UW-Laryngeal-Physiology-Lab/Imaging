@@ -38,6 +38,8 @@ def display(img):
     cv2.imshow('Point Tracker', img)
 
 def selectPoints(IMG, TEMPLATE_SIZE):
+    print('Please select points to track')
+
     global xClick,yClick
 
     colorCpy = cv2.cvtColor(IMG, cv2.COLOR_GRAY2BGR)
@@ -49,7 +51,7 @@ def selectPoints(IMG, TEMPLATE_SIZE):
     initialLocations = []
 
     # point selection stage
-    while(1):
+    while True:
         if(xClick >= 0 and yClick >= 0):
             pointPic = IMG[
                 (yClick-TEMPLATE_SIZE):(yClick+TEMPLATE_SIZE),

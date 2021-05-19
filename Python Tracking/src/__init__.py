@@ -11,3 +11,4 @@ import src.loadImage
 import src.window
 import src.process
 import src.graphs
+import src.video
