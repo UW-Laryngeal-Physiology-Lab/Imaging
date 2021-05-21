@@ -23,19 +23,18 @@ NUM_FRAMES = video.load('motion.avi')
 TEMPLATE_SIZE = 5                   # size of template image
 METHOD = cv2.TM_CCORR_NORMED        # image comparison technique
 SEARCH_MARGIN = 15                  # margin around known location to check
-IMG = loadImage.loadFirstFrame()
-HEIGHT, WIDTH = IMG.shape
+IMG_COLOR = loadImage.loadFirstFrame()    # returns color image
+IMG_GRAY = cv2.cvtColor(IMG_COLOR, cv2.COLOR_BGR2GRAY)
 
 ################################################################################
 # Point selection
 ################################################################################
-
-templates, initialLocations = window.selectPoints(IMG, TEMPLATE_SIZE)
+imageWithMidline, p1, p2 = window.drawMidline(IMG_COLOR)
+templates, initialLocations = window.selectPoints(imageWithMidline, IMG_GRAY, TEMPLATE_SIZE)
 
 ################################################################################
 # Motion Processing
 ################################################################################
-
 print("Beginning processing...\n" +
     "please be patient at this time...")
 
@@ -48,14 +47,12 @@ print("Processing is done!")
 ################################################################################
 # Graph generation and Motion display
 ################################################################################
-
 graphs.plotMotion(locations)
 window.showMotion(locations, TEMPLATE_SIZE)
 
 ################################################################################
 # Program cleanup
 ################################################################################
-
 for i in range(NUM_FRAMES):
     os.remove('./assets/pics/PIC' + str(i) + '.png')
 cv2.destroyAllWindows()
