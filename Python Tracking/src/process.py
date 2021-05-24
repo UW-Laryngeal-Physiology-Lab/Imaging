@@ -9,6 +9,7 @@
 import sys
 import numpy as np
 import cv2
+from src import images
 
 def track(templates, initialLocations, NUM_FRAMES, SEARCH_MARGIN, METHOD):
     # array for all locations over all frames
@@ -17,11 +18,7 @@ def track(templates, initialLocations, NUM_FRAMES, SEARCH_MARGIN, METHOD):
 
     for i in range(NUM_FRAMES):
         # import fresh frame
-        frame = cv2.imread('./assets/pics/PIC' + str(i) 
-            + '.png', cv2.IMREAD_GRAYSCALE)
-        if frame is None:
-            sys.exit("Could not read image.")
-        frame = cv2.resize(frame, (0,0), fx=2, fy=2)
+        frame = cv2.cvtColor(images.load(i), cv2.COLOR_BGR2GRAY)
         
         # row array
         frameLocations = []

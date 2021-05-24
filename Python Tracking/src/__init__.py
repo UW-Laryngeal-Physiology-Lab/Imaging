@@ -7,7 +7,7 @@
 #
 ################################################################################
 
-import src.loadImage
+import src.images
 import src.window
 import src.process
 import src.graphs

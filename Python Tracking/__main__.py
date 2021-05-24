@@ -23,12 +23,13 @@ NUM_FRAMES = video.load('motion.avi')
 TEMPLATE_SIZE = 5                   # size of template image
 METHOD = cv2.TM_CCORR_NORMED        # image comparison technique
 SEARCH_MARGIN = 15                  # margin around known location to check
-IMG_COLOR = loadImage.loadFirstFrame()    # returns color image
+IMG_COLOR = images.load(0)    # returns color image
 IMG_GRAY = cv2.cvtColor(IMG_COLOR, cv2.COLOR_BGR2GRAY)
 
 ################################################################################
-# Point selection
+# Point selection and midline
 ################################################################################
+window.init()
 imageWithMidline, p1, p2 = window.drawMidline(IMG_COLOR)
 templates, initialLocations = window.selectPoints(imageWithMidline, IMG_GRAY, TEMPLATE_SIZE)
 
@@ -54,5 +55,5 @@ window.showMotion(locations, TEMPLATE_SIZE)
 # Program cleanup
 ################################################################################
 for i in range(NUM_FRAMES):
-    os.remove('./assets/pics/PIC' + str(i) + '.png')
+    os.remove('./assets/.rawPicsCache/PIC' + str(i) + '.png')
 cv2.destroyAllWindows()

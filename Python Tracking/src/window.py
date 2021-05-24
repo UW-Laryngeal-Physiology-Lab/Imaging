@@ -12,6 +12,7 @@
 
 import sys
 import cv2
+from src import images
 
 # Declaration of global mouse variables
 xClick,yClick = -1,-1
@@ -31,13 +32,13 @@ def mouseEvent(event,xPos,yPos,flags,param):
         yHover = yPos        
 
 # window setup
-cv2.namedWindow('Point Tracker')
-cv2.setMouseCallback('Point Tracker', mouseEvent)
+def init():
+    cv2.namedWindow('Point Tracker')
+    cv2.setMouseCallback('Point Tracker', mouseEvent)
+
 
 def display(img):
     cv2.imshow('Point Tracker', img)
-
-
 
 def drawMidline(image):
     """Function to draw a midline on input video. Allows for footage taken at
@@ -140,11 +141,7 @@ def selectPoints(displayImage, processingImage, TEMPLATE_SIZE):
 def showMotion(locations, TEMPLATE_SIZE):
     i=0
     while(True):
-        frame = cv2.imread('./assets/pics/PIC' + str(i) 
-            + '.png', cv2.IMREAD_COLOR)
-        if frame is None:
-            sys.exit("Could not read image.")
-        frame = cv2.resize(frame, (0,0), fx=2, fy=2)
+        frame = images.load(i)
 
         for j in range(len(locations[i])):
             cv2.rectangle(frame, tuple(locations[i][j]), 

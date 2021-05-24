@@ -21,7 +21,7 @@ def load(file):
 
     counter = 0
     while ret:
-        cv2.imwrite('./assets/pics/PIC' + str(counter) + '.png', frame)
+        cv2.imwrite('./assets/.rawPicsCache/PIC' + str(counter) + '.png', frame)
         counter += 1
         ret, frame = cap.read()
 
