@@ -23,24 +23,26 @@ NUM_FRAMES = video.load('motion.avi')
 TEMPLATE_SIZE = 5                   # size of template image
 METHOD = cv2.TM_CCORR_NORMED        # image comparison technique
 SEARCH_MARGIN = 15                  # margin around known location to check
+
+################################################################################
+# Midline, image adjustment, point selection
+################################################################################
+window.init()
+imageWithMidline, p1, p2 = window.drawMidline(images.load(0))
+images.alignGlottis(p1, p2, NUM_FRAMES)
+
+# # midline equation
+# # Ax + By + C = 0
+# # utilizing math concepts from
+# # https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+# A = p2[1] - p1[1]   # y2 - y1
+# B = p1[0] - p2[0]   # x1 - x2
+# C = (p2[0] - p1[0])*p1[1] + (p1[1] - p2[1])*p1[0]
+
 IMG_COLOR = images.load(0)          # returns color image
 IMG_GRAY = cv2.cvtColor(IMG_COLOR, cv2.COLOR_BGR2GRAY)
 
-################################################################################
-# Point selection and midline
-################################################################################
-window.init()
-imageWithMidline, p1, p2 = window.drawMidline(IMG_COLOR)
-
-# midline equation
-# Ax + By + C = 0
-# utilizing math concepts from
-# https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-A = p2[1] - p1[1]   # y2 - y1
-B = p1[0] - p2[0]   # x1 - x2
-C = (p2[0] - p1[0])*p1[1] + (p1[1] - p2[1])*p1[0]
-
-templates, initialLocations = window.selectPoints(imageWithMidline, IMG_GRAY, TEMPLATE_SIZE)
+templates, initialLocations = window.selectPoints(IMG_COLOR, IMG_GRAY, TEMPLATE_SIZE)
 
 ################################################################################
 # Motion Processing
@@ -60,11 +62,12 @@ print("Processing is done!")
 # Graph generation and Motion display
 ################################################################################
 graphs.plotMotion(locations)
-window.markedMotion(locations, TEMPLATE_SIZE, p1, p2)
+window.showMotion(locations, TEMPLATE_SIZE)
+# window.markedMotion(locations, TEMPLATE_SIZE, p1, p2)
 
 ################################################################################
 # Program cleanup
 ################################################################################
 for i in range(NUM_FRAMES):
-    os.remove('./assets/.rawPicsCache/PIC' + str(i) + '.png')
+    os.remove('./assets/.picsCache/PIC' + str(i) + '.png')
 cv2.destroyAllWindows()
