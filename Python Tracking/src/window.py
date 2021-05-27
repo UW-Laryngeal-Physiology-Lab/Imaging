@@ -41,9 +41,7 @@ def display(img):
     cv2.imshow('Point Tracker', img)
 
 def drawMidline(image):
-    """Function to draw a midline on input video. Allows for footage taken at
-    any angle and will give rise to a vectoring function and the midline is
-    center of oscillation.
+    """Function to draw a midline on input frame. Is called by rotate function.
 
     Args:
         image:  the color image to draw the midline on
@@ -60,31 +58,44 @@ def drawMidline(image):
     p1 = (None, None)
     p2 = (None, None)
 
+    baseImageSave = image.copy()
     while True:
         frameCpy = image.copy()
 
         if(xClick >= 0 and yClick >= 0):
             if(p1[0] == None and p1[1] == None):
                 p1 = (xClick, yClick)
+                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (255,0,0), -1)
+
             elif(p2[0] == None and p2[1] == None):
                 p2 = (xClick, yClick)
                 frameCpy = cv2.line(frameCpy, p1, p2, (255,0,0), 2)
-            frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (255,0,0), -1)
+                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (255,0,0), -1)
+            else:
+                frameCpy = baseImageSave.copy()
+                p1 = (None, None)
+                p2 = (None, None)
             xClick, yClick = -1, -1
-            image = frameCpy
+            image = frameCpy.copy()
         elif(xHover >= 0 and yHover >= 0):
-            frameCpy = cv2.circle(frameCpy, (xHover, yHover), 3, (0,0,255), -1)
-            if (p1[0] != None and p1[1] != None):
+            if (p2[0] == None and p2[1] == None):
+                frameCpy = cv2.circle(frameCpy, (xHover, yHover), 3, (0,0,255), -1)
+            if (p1[0] != None and p1[1] != None and p2[0] == None and p2[1] == None):
                 frameCpy = cv2.line(frameCpy, p1, (xHover, yHover), (0,0,255), 2)
                 frameCpy = cv2.circle(frameCpy, p1, 3, (255,0,0), -1)
-        
+
         display(frameCpy)
 
-        cv2.waitKey(20)
-        if(p1[0] != None and p1[1] != None and p2[0] != None and p2[1] != None):
+        # Exit with ENTER
+        if( cv2.waitKey(20) & 0xFF == 13    # 13 = ASCII ENTER
+            and p1[0] != None
+            and p1[1] != None
+            and p2[0] != None
+            and p2[1] != None ):
             break
 
     return image, p1, p2
+
 
 def selectPoints(displayImage, processingImage, TEMPLATE_SIZE):
     """Point selection function to pick out distinct points, savinging their
@@ -133,7 +144,7 @@ def selectPoints(displayImage, processingImage, TEMPLATE_SIZE):
         display(displayImage)
 
         # Exit with ENTER
-        if cv2.waitKey(20) & 0xFF == 13:    # 49 = ASCII ENTER
+        if cv2.waitKey(20) & 0xFF == 13:    # 13 = ASCII ENTER
             break
     
     return templates, initialLocations
@@ -158,4 +169,38 @@ def showMotion(locations, TEMPLATE_SIZE):
             i=0
         
         if(cv2.waitKey(10) & 0xFF == 27):
+            break
+
+def markedMotion(locations, TEMPLATE_SIZE, p1, p2):
+    A = p2[1] - p1[1]   # y2 - y1
+    B = p1[0] - p2[0]   # x1 - x2
+    C = (p2[0] - p1[0])*p1[1] + (p1[1] - p2[1])*p1[0]
+    
+    i=0
+    while(True):
+        frame = images.load(i)
+
+        frame = cv2.line(frame, p1, p2, (200, 0, 0), 2)
+
+        for j in range(len(locations[i])):
+            x = locations[i][j][0] + TEMPLATE_SIZE
+            y = locations[i][j][1] + TEMPLATE_SIZE
+            midlineX = int((B*(B*x - A*y) - A*C)/(A*A + B*B))
+            midlineY = int((A*(A*y - B*x) - B*C)/(A*A + B*B))
+
+            frame = cv2.line(frame, (x,y), (midlineX, midlineY), (255, 100, 100), 1)
+
+            frame = cv2.rectangle(frame, (x - TEMPLATE_SIZE, y - TEMPLATE_SIZE), 
+                (x + TEMPLATE_SIZE, y + TEMPLATE_SIZE), 
+                (0,255,0), 1)
+
+        display(frame)
+
+        cv2.waitKey(1)
+        
+        i += 1
+        if(i >= len(locations)):
+            i=0
+        
+        if(cv2.waitKey(10) & 0xFF == 27):   # ascii ESC
             break
