@@ -29,13 +29,14 @@ def mouseEvent(event,xPos,yPos,flags,param):
         mouseRelease = True
     if (event==cv2.EVENT_MOUSEMOVE):
         xHover = xPos
-        yHover = yPos        
+        yHover = yPos   
 
-# window setup
 def init():
     cv2.namedWindow('Point Tracker')
     cv2.setMouseCallback('Point Tracker', mouseEvent)
 
+def kill():
+    cv2.destroyWindow('Point Tracker')
 
 def display(img):
     cv2.imshow('Point Tracker', img)
@@ -155,14 +156,15 @@ def showMotion(locations, TEMPLATE_SIZE):
         frame = images.load(i)
 
         for j in range(len(locations[i])):
-            cv2.rectangle(frame, tuple(locations[i][j]), 
-                (locations[i][j][0] + 2*TEMPLATE_SIZE,
-                locations[i][j][1] + 2*TEMPLATE_SIZE), 
+            cv2.rectangle(frame, 
+                (locations[i][j][0]-TEMPLATE_SIZE,locations[i][j][1]-TEMPLATE_SIZE),
+                (locations[i][j][0]+TEMPLATE_SIZE,locations[i][j][1]+TEMPLATE_SIZE), 
                 (0,255,0), 1)
+            cv2.putText(frame, str(j), 
+                (locations[i][j][0]+TEMPLATE_SIZE,locations[i][j][1]+TEMPLATE_SIZE),
+                cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0), 1)
 
         display(frame)
-
-        cv2.waitKey(1)
         
         i += 1
         if(i >= len(locations)):

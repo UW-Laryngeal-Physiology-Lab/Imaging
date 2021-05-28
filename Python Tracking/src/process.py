@@ -12,7 +12,7 @@ import pandas as pd
 import cv2
 from src import images
 
-def track(templates, initialLocations, NUM_FRAMES, SEARCH_MARGIN, METHOD):
+def track(templates, initialLocations, NUM_FRAMES, METHOD):
     NUM_POINTS = len(initialLocations)
     # array for all locations over all frames
     # indexing is [frame, point, x and y]
@@ -27,18 +27,18 @@ def track(templates, initialLocations, NUM_FRAMES, SEARCH_MARGIN, METHOD):
 
         # iterate over all points
         for j in range(NUM_POINTS):
-            minY = initialLocations[j][1]-SEARCH_MARGIN
-            maxY = initialLocations[j][1]+SEARCH_MARGIN
-            minX = initialLocations[j][0]-SEARCH_MARGIN
-            maxX = initialLocations[j][0]+SEARCH_MARGIN
+            minY = initialLocations[j][1]-15
+            maxY = initialLocations[j][1]+15
+            minX = initialLocations[j][0]-30
+            maxX = initialLocations[j][0]+30
             if(minY < 0):
                 minY = 0
             if(maxY > frame.shape[0]):
-                maxY = frame.shape[0]
+                maxY = frame.shape[0] - 1
             if(minX < 0):
                 minX = 0
             if(maxX > frame.shape[1]):
-                maxX = frame.shape[1]
+                maxX = frame.shape[1] - 1
             croppedFrame = frame[minY:maxY, minX:maxX]
 
             result = cv2.matchTemplate(croppedFrame, templates[j], METHOD)
