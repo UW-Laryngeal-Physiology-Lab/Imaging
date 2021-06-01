@@ -32,14 +32,15 @@ imageWithMidline, p1, p2 = window.drawMidline(images.load(0))
 window.kill()
 print("Beginning automatic image alignment...\n" +
     "...please be patient at this time...")
-images.alignGlottis(p1, p2, NUM_FRAMES)
+midVal = images.alignGlottis(p1, p2, NUM_FRAMES)
+midVal *= 2 # this is due to the rescaling when loading the image again
 print("Alignment is complete!")
 
 IMG_COLOR = images.load(0)          # returns color image
 IMG_GRAY = cv2.cvtColor(IMG_COLOR, cv2.COLOR_BGR2GRAY)
 
 window.init()
-templates, initialLocations = window.selectPoints(IMG_COLOR, IMG_GRAY, TEMPLATE_SIZE)
+templates, initialLocations = window.selectPoints(IMG_COLOR, IMG_GRAY, TEMPLATE_SIZE, midVal)
 window.kill()
 
 ################################################################################
@@ -51,7 +52,8 @@ print("Beginning tracking...\n" +
 # point tracking stage
 locations = process.track(templates, initialLocations, NUM_FRAMES, METHOD)
 
-# data = process.calculate(locations)
+data = process.calculateDistance(locations, midVal)
+print(data)
 
 print("Tracking is done!")
 
@@ -59,7 +61,7 @@ print("Tracking is done!")
 # Graph generation and Motion display
 ################################################################################
 window.init()
-graphs.plotMotion(locations)
+graphs.plotMotion(data)
 window.showMotion(locations, TEMPLATE_SIZE)
 # window.markedMotion(locations, TEMPLATE_SIZE, p1, p2)
 

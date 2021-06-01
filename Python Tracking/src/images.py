@@ -48,6 +48,8 @@ def alignGlottis(p1, p2, NUM_FRAMES):
         img = img[top:bottom, left:right, :]
 
         write(img, i)
+    
+    return int(midlineLength)
 
         
 

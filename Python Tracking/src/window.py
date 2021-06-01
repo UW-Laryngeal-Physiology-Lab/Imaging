@@ -66,12 +66,12 @@ def drawMidline(image):
         if(xClick >= 0 and yClick >= 0):
             if(p1[0] == None and p1[1] == None):
                 p1 = (xClick, yClick)
-                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (255,0,0), -1)
+                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (0,255,0), -1)
 
             elif(p2[0] == None and p2[1] == None):
                 p2 = (xClick, yClick)
-                frameCpy = cv2.line(frameCpy, p1, p2, (255,0,0), 2)
-                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (255,0,0), -1)
+                frameCpy = cv2.line(frameCpy, p1, p2, (0,255,0), 2)
+                frameCpy = cv2.circle(frameCpy, (xClick, yClick), 3, (0,255,0), -1)
             else:
                 frameCpy = baseImageSave.copy()
                 p1 = (None, None)
@@ -83,7 +83,7 @@ def drawMidline(image):
                 frameCpy = cv2.circle(frameCpy, (xHover, yHover), 3, (0,0,255), -1)
             if (p1[0] != None and p1[1] != None and p2[0] == None and p2[1] == None):
                 frameCpy = cv2.line(frameCpy, p1, (xHover, yHover), (0,0,255), 2)
-                frameCpy = cv2.circle(frameCpy, p1, 3, (255,0,0), -1)
+                frameCpy = cv2.circle(frameCpy, p1, 3, (0,255,0), -1)
 
         display(frameCpy)
 
@@ -98,7 +98,7 @@ def drawMidline(image):
     return image, p1, p2
 
 
-def selectPoints(displayImage, processingImage, TEMPLATE_SIZE):
+def selectPoints(displayImage, processingImage, TEMPLATE_SIZE, midVal):
     """Point selection function to pick out distinct points, savinging their
     location and image of surrounding area
 
@@ -122,6 +122,9 @@ def selectPoints(displayImage, processingImage, TEMPLATE_SIZE):
 
     # array for location data
     initialLocations = []
+
+    displayImage = cv2.line(displayImage, (midVal, 0),
+        (midVal, displayImage.shape[0]-1), (0,255,0), 1)
 
     # point selection stage
     while True:

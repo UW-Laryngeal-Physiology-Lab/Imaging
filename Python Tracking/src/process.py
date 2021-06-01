@@ -62,5 +62,11 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD):
     return locations
 
 
-def calculateDistance(locations):
-    pass
+def calculateDistance(locations, midVal):
+    numFrames = locations.shape[0]
+    numPoints = locations.shape[1]
+    data = np.empty((numFrames, numPoints))
+    for i in range(numFrames):
+        for j in range(numPoints):
+            data[i,j] = abs( locations[i,j,0] - midVal )
+    return data
