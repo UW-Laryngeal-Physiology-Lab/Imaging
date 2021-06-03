@@ -31,3 +31,7 @@ def plotMotion(data):
             bottom = math.floor(min - 0.5 * (max - min))
             axs[i].set_ylim(bottom, top)
     plt.show()
+
+def plotAveraged(data):
+    plt.plot(data)
+    plt.show()

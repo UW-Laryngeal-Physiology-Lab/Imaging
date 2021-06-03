@@ -12,7 +12,7 @@ import pandas as pd
 import cv2
 from src import images
 
-def track(templates, initialLocations, NUM_FRAMES, METHOD):
+def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
     NUM_POINTS = len(initialLocations)
     # array for all locations over all frames
     # indexing is [frame, point, x and y]
@@ -27,21 +27,36 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD):
 
         # iterate over all points
         for j in range(NUM_POINTS):
-            minY = initialLocations[j][1]-15
-            maxY = initialLocations[j][1]+15
-            minX = initialLocations[j][0]-30
-            maxX = initialLocations[j][0]+30
-            if(minY < 0):
-                minY = 0
-            if(maxY > frame.shape[0]):
-                maxY = frame.shape[0] - 1
-            if(minX < 0):
-                minX = 0
-            if(maxX > frame.shape[1]):
-                maxX = frame.shape[1] - 1
+            # hard boundaries prevent stray
+            minY = initialLocations[j][1]-TEMPLATE_SIZE-5
+            maxY = initialLocations[j][1]+TEMPLATE_SIZE+5
+            hardMinX = initialLocations[j][0]-TEMPLATE_SIZE-30
+            hardMaxX = initialLocations[j][0]+TEMPLATE_SIZE+30
+
+            # soft boundary restricts position delta
+            maxFrameMotion = 4
+            if(i > 0):
+                previousLocation = locations[-1, j, 0]
+                softMinX = previousLocation - TEMPLATE_SIZE - maxFrameMotion
+                softMaxX = previousLocation + TEMPLATE_SIZE + maxFrameMotion
+            else:
+                softMinX = hardMinX
+                softMaxX = hardMaxX
+
+            # decides which boundary to use
+            if(softMinX > hardMinX):
+                minX = softMinX
+            else:
+                minX = hardMinX
+            if(softMaxX < hardMaxX):
+                maxX = softMaxX
+            else:
+                maxX = hardMaxX
+
             croppedFrame = frame[minY:maxY, minX:maxX]
 
             result = cv2.matchTemplate(croppedFrame, templates[j], METHOD)
+
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
             # byproduct of other image comparision techniques. They have different 
@@ -51,7 +66,7 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD):
             else:
                 location = max_loc
 
-            location = (location[0] + minX, location[1] + minY)
+            location = (location[0] + minX + TEMPLATE_SIZE, location[1] + minY + TEMPLATE_SIZE)
 
             frameLocations.append(location)
 
@@ -70,3 +85,12 @@ def calculateDistance(locations, midVal):
         for j in range(numPoints):
             data[i,j] = abs( locations[i,j,0] - midVal )
     return data
+
+def averageAndNormalize(data):
+    pointMean = np.mean(data, 0)
+    pointStd = np.std(data, 0)
+    normalizedArray = (data - pointMean) / pointStd
+    normalizedAndAveraged = np.mean(normalizedArray, 1)
+    return normalizedAndAveraged
+
+

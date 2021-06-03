@@ -50,10 +50,11 @@ print("Beginning tracking...\n" +
     "...please be patient at this time...")
 
 # point tracking stage
-locations = process.track(templates, initialLocations, NUM_FRAMES, METHOD)
+locations = process.track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE)
 
 data = process.calculateDistance(locations, midVal)
-print(data)
+
+averagedData = process.averageAndNormalize(data)
 
 print("Tracking is done!")
 
@@ -61,7 +62,8 @@ print("Tracking is done!")
 # Graph generation and Motion display
 ################################################################################
 window.init()
-graphs.plotMotion(data)
+# graphs.plotMotion(data)
+graphs.plotAveraged(averagedData)
 window.showMotion(locations, TEMPLATE_SIZE)
 # window.markedMotion(locations, TEMPLATE_SIZE, p1, p2)
 
