@@ -8,9 +8,9 @@
 
 import sys
 import numpy as np
-import pandas as pd
 import cv2
 from src import images
+import math
 
 def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
     NUM_POINTS = len(initialLocations)
@@ -28,13 +28,13 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
         # iterate over all points
         for j in range(NUM_POINTS):
             # hard boundaries prevent stray
-            minY = initialLocations[j][1]-TEMPLATE_SIZE-5
-            maxY = initialLocations[j][1]+TEMPLATE_SIZE+5
+            minY = initialLocations[j][1]-TEMPLATE_SIZE-3
+            maxY = initialLocations[j][1]+TEMPLATE_SIZE+3
             hardMinX = initialLocations[j][0]-TEMPLATE_SIZE-30
             hardMaxX = initialLocations[j][0]+TEMPLATE_SIZE+30
 
             # soft boundary restricts position delta
-            maxFrameMotion = 4
+            maxFrameMotion = 3
             if(i > 0):
                 previousLocation = locations[-1, j, 0]
                 softMinX = previousLocation - TEMPLATE_SIZE - maxFrameMotion
@@ -42,6 +42,17 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
             else:
                 softMinX = hardMinX
                 softMaxX = hardMaxX
+
+            # maxDeviation = 2
+            # if(i > 1):
+            #     locSub1 = locations[-1, j, 0]
+            #     locSub2 = locations[-2, j, 0]
+            #     predictedLoc = locSub1 - (locSub2 - locSub1)
+            #     softMinX = predictedLoc - TEMPLATE_SIZE - maxDeviation
+            #     softMaxX = predictedLoc + TEMPLATE_SIZE + maxDeviation
+            # else:
+            #     softMinX = hardMinX
+            #     softMaxX = hardMaxX
 
             # decides which boundary to use
             if(softMinX > hardMinX):
@@ -92,5 +103,40 @@ def averageAndNormalize(data):
     normalizedArray = (data - pointMean) / pointStd
     normalizedAndAveraged = np.mean(normalizedArray, 1)
     return normalizedAndAveraged
+
+# This value should be the number of frames between 1 and 2 motion cycles to 
+# capture the next maximum but not the one after
+REACH_CONSTANT = 30
+
+def getMaxIndices(data):
+    numFrames = data.shape[0]
+    numPoints = data.shape[1]
+
+    maxIndices = []
+
+    for i in range(numPoints):
+        max = np.amax(data[0:25, i], 0)
+        maxIndex = np.argmax(data[0:25, i], 0)
+
+        pointMaximumLocs = []
+        pointMaximumLocs.append(maxIndex)
+
+        j = maxIndex + 5
+        while(j < numFrames - REACH_CONSTANT):
+            max = np.amax(data[j:j+REACH_CONSTANT, i], 0)
+            maxIndex = j + np.argmax(data[j:j+REACH_CONSTANT, i], 0)
+            pointMaximumLocs.append(maxIndex)
+            j = maxIndex + 5
+
+        maxIndices.append(pointMaximumLocs)
+    
+    return maxIndices
+
+def objective(x, a, b, c):
+    return a*math.sin(b*x) + c
+
+def fitCurves(data):
+    numFrames = data.shape[0]
+    numPoints = data.shape[1]
 
 

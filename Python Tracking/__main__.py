@@ -19,7 +19,8 @@ import time
 ################################################################################
 # Initialization
 ################################################################################
-NUM_FRAMES = video.load('motion.avi')
+NUM_FRAMES, FPS = video.load('motion.avi')
+print("FPS:", FPS)
 TEMPLATE_SIZE = 10                  # size of template image
 METHOD = cv2.TM_CCORR_NORMED        # image comparison technique
 
@@ -54,16 +55,22 @@ locations = process.track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPL
 
 data = process.calculateDistance(locations, midVal)
 
-averagedData = process.averageAndNormalize(data)
+# This method is ineffective because of differences in phase for points of 
+# varying distance from the midline.
+# averagedData = process.averageAndNormalize(data)
 
 print("Tracking is done!")
 
 ################################################################################
 # Graph generation and Motion display
 ################################################################################
+
+maxIndices = process.getMaxIndices(data)
+
+graphs.plotMotion(data, maxIndices)
+# graphs.plotAveraged(averagedData)
+
 window.init()
-# graphs.plotMotion(data)
-graphs.plotAveraged(averagedData)
 window.showMotion(locations, TEMPLATE_SIZE)
 # window.markedMotion(locations, TEMPLATE_SIZE, p1, p2)
 

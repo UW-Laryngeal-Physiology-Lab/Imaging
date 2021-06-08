@@ -15,6 +15,7 @@ def load(file):
 
     cap = cv2.VideoCapture('./assets/' + file)
     ret, frame = cap.read()
+    FPS = int(cap.get(cv2.CAP_PROP_FPS))
 
     if(not ret):
         sys.exit("Could not read first frame.")
@@ -26,4 +27,4 @@ def load(file):
         ret, frame = cap.read()
 
     print('Finished loading ' + './assets/' + file)
-    return counter
+    return counter, FPS
