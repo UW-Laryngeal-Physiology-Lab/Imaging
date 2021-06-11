@@ -12,15 +12,17 @@ import cv2
 from src import images
 import math
 
-def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
+def track(templates, initialLocations, METHOD, TEMPLATE_SIZE):
     NUM_POINTS = len(initialLocations)
     # array for all locations over all frames
     # indexing is [frame, point, x and y]
     locations = np.empty((0, NUM_POINTS, 2))
 
-    for i in range(NUM_FRAMES):
+    i=0
+    colorImage = images.load(i)
+    while(colorImage is not None):
         # import fresh frame
-        frame = cv2.cvtColor(images.load(i), cv2.COLOR_BGR2GRAY)
+        frame = cv2.cvtColor(colorImage, cv2.COLOR_BGR2GRAY)
         
         # row array
         frameLocations = []
@@ -84,7 +86,9 @@ def track(templates, initialLocations, NUM_FRAMES, METHOD, TEMPLATE_SIZE):
         # push new row to locations array
         frameLocations = np.array([frameLocations]).astype(int)
         locations = np.append(locations, frameLocations, axis=0).astype(int)
-    
+        i += 1
+        colorImage = images.load(i)
+
     return locations
 
 
