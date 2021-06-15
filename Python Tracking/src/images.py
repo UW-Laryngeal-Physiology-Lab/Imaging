@@ -11,12 +11,17 @@ import cv2
 import math
 import numpy as np
 
+MAX_WIDTH = 1000
+MAX_HEIGHT = 600
+
 def load(i):
-    xscale = 2
-    yscale = 2
     img = cv2.imread('./assets/.picsCache/PIC' + str(i) + '.png', cv2.IMREAD_COLOR)
     if img is not None:
-        img = cv2.resize(img, (0,0), fx=xscale, fy=yscale)
+        h, w = img.shape[0], img.shape[1]
+        heightRatio = MAX_HEIGHT/h
+        widthRatio = MAX_WIDTH/w
+        dominantRatio = heightRatio if heightRatio < widthRatio else widthRatio
+        img = cv2.resize(img, (0,0), fx=dominantRatio, fy=dominantRatio)
     return img
 
 def write(img, i):

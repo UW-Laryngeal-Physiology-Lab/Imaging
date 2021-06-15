@@ -23,13 +23,13 @@ metaFile.seek(0)
 
 vidData = json.load(metaFile)
 
-NUM_FRAMES, FPS = video.load('motion.avi')
+NUM_FRAMES, FPS = video.load('Normal.avi')
 
 vidData["fps"] = FPS
 vidData["frameCount"] = NUM_FRAMES
 
 window.init()
-imageWithMidline, p1, p2 = window.drawMidline(images.load(0))
+p1, p2 = window.drawMidline(images.load(0))
 window.kill()
 
 print("Beginning automatic image alignment...\n" +
@@ -37,9 +37,10 @@ print("Beginning automatic image alignment...\n" +
 
 def verticalAlignGlottis(p1, p2, NUM_FRAMES):
     midpoint = (p1[0] + (p2[0] - p1[0])/2, p1[1] + (p2[1] - p1[1])/2)
-    inverseSlope = (p1[0] - p2[0]) / (p1[1] - p2[1])
-    angleFromVertAxis = -math.tan(inverseSlope) * 180 / math.pi
-    rotationMatrix = cv2.getRotationMatrix2D(midpoint, angleFromVertAxis, 1)
+    slope = (p2[1] - p1[1]) / (p1[0] - p2[0])
+    angle = math.atan(slope) * 180 / math.pi
+
+    rotationMatrix = cv2.getRotationMatrix2D(midpoint, 90 - angle, 1)
 
     midlineLength = math.sqrt((p1[0] - p2[0])*(p1[0] - p2[0]) + (p1[1] - p2[1])*(p1[1] - p2[1]))
 
@@ -47,21 +48,40 @@ def verticalAlignGlottis(p1, p2, NUM_FRAMES):
         img = images.load(i)
         cols,rows,p = img.shape
         img = cv2.warpAffine(img, rotationMatrix, (cols, rows))
-
-        bottom = int(midpoint[1] + midlineLength * 3/4)
-        top = int(midpoint[1] - midlineLength * 3/4)
-        left = int(midpoint[0] - midlineLength)
-        right = int(midpoint[0] + midlineLength)
-        if(top < 0): bottom = 0
-        if(left < 0): left = 0
-        if(bottom >= rows): bottom = rows - 1
-        if(right >= cols): right = cols - 1
-
-        img = img[top:bottom, left:right, :]
-
+        img = crop(img, midpoint, midlineLength)
         images.write(img, i)
 
-verticalAlignGlottis(p1, p2, NUM_FRAMES)
+def crop(img, midpoint, midlineLength):
+    rows,cols,p = img.shape
+    bottom = int(midpoint[1] + midlineLength * 3/4)
+    top = int(midpoint[1] - midlineLength * 3/4)
+    left = int(midpoint[0] - midlineLength)
+    right = int(midpoint[0] + midlineLength)
+
+    if(top < 0): 
+        top = 0
+    if(bottom >= rows): 
+        bottom = rows - 1
+    if(left < 0 or right >= cols):
+        leftGap = midpoint[0]
+        rightGap = cols - 1 - midpoint[0] 
+        smallestGap = leftGap if leftGap < rightGap else rightGap
+        left = int(midpoint[0] - smallestGap)
+        right = int(midpoint[0] + smallestGap)
+
+    img = img[top:bottom, left:right, :]
+    return img
+
+if(p1[0] != p2[0]):
+    verticalAlignGlottis(p1, p2, NUM_FRAMES)
+else:
+    midlineLength = abs(p1[1] - p2[1])
+    midpoint = (p1[0], (p1[1] + p2[1])/2)
+    for i in range(NUM_FRAMES):
+        img = images.load(i)
+        img = crop(img, midpoint, midlineLength)
+        images.write(img, i)
+
 
 print("Alignment is complete!")
 metaFile.seek(0)

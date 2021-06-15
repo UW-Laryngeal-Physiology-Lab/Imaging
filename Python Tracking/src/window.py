@@ -95,7 +95,7 @@ def drawMidline(image):
             and p2[1] != None ):
             break
 
-    return image, p1, p2
+    return p1, p2
 
 
 def selectPoints(displayImage, processingImage, TEMPLATE_SIZE, midVal):
