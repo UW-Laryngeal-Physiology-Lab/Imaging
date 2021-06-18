@@ -23,7 +23,7 @@ metaFile.seek(0)
 
 vidData = json.load(metaFile)
 
-NUM_FRAMES, FPS = video.load('Normal.avi')
+NUM_FRAMES, FPS = video.load('motion.avi')
 
 vidData["fps"] = FPS
 vidData["frameCount"] = NUM_FRAMES
