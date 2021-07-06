@@ -36,6 +36,14 @@ print("Beginning automatic image alignment...\n" +
     "...please be patient at this time...")
 
 def verticalAlignGlottis(p1, p2, NUM_FRAMES):
+    '''Overwrites existing images in cache with adjusted images to vertically 
+    align the glottis.
+
+    Args:
+        p1:         2-tuple representing (x,y) position of one of the glottis ends
+        p2:         2-tuple representing (x,y) position of the other glottis end
+        NUM_FRAMES: number of frames stored in cache
+    '''
     midpoint = (p1[0] + (p2[0] - p1[0])/2, p1[1] + (p2[1] - p1[1])/2)
     slope = (p2[1] - p1[1]) / (p1[0] - p2[0])
     angle = math.atan(slope) * 180 / math.pi
@@ -52,6 +60,17 @@ def verticalAlignGlottis(p1, p2, NUM_FRAMES):
         images.write(img, i)
 
 def crop(img, midpoint, midlineLength):
+    '''Crops image to desireable size for optimal viewing with glottal midline 
+    centered.
+
+    Args:
+        img:            image to crop
+        midpoint:       the desired midpoint of the unadjusted image
+        midlineLength:  lenght of line drawn(length of glottis)
+
+    Returns:
+        img:    cropped image
+    '''
     rows,cols,p = img.shape
     bottom = int(midpoint[1] + midlineLength * 3/4)
     top = int(midpoint[1] - midlineLength * 3/4)
@@ -72,6 +91,7 @@ def crop(img, midpoint, midlineLength):
     img = img[top:bottom, left:right, :]
     return img
 
+# vvv return to standard program execution flow
 if(p1[0] != p2[0]):
     verticalAlignGlottis(p1, p2, NUM_FRAMES)
 else:
