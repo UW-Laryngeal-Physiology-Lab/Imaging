@@ -20,7 +20,7 @@ import json
 i=0
 image = images.load(i)
 while(image is not None):
-    os.remove('./assets/.picsCache/PIC' + str(i) + '.png')
+    os.remove('./assets/picsCache/PIC' + str(i) + '.png')
     i += 1
     image = images.load(i)
 

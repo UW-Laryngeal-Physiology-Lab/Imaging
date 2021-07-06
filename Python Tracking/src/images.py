@@ -15,7 +15,7 @@ MAX_WIDTH = 1000
 MAX_HEIGHT = 600
 
 def load(i):
-    img = cv2.imread('./assets/.picsCache/PIC' + str(i) + '.png', cv2.IMREAD_COLOR)
+    img = cv2.imread('./assets/picsCache/PIC' + str(i) + '.png', cv2.IMREAD_COLOR)
     if img is not None:
         h, w = img.shape[0], img.shape[1]
         heightRatio = MAX_HEIGHT/h
@@ -25,7 +25,7 @@ def load(i):
     return img
 
 def write(img, i):
-    cv2.imwrite('./assets/.picsCache/PIC' + str(i) + '.png', img)
+    cv2.imwrite('./assets/picsCache/PIC' + str(i) + '.png', img)
 
 def alignGlottis(p1, p2, NUM_FRAMES):
     midpoint = (p1[0] + (p2[0] - p1[0])/2, p1[1] + (p2[1] - p1[1])/2)
