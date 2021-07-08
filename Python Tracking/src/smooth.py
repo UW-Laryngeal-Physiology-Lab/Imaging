@@ -20,4 +20,3 @@ def smoothData():
             data[i][j] = (data[i-1][j] + data[i][j] + data[i+1][j]) / 3
 
     df.to_csv('./assets/motionDataSmooth.csv', index=False)
-
