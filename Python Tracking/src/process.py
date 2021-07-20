@@ -136,11 +136,4 @@ def getMaxIndices(data):
     
     return maxIndices
 
-def objective(x, a, b, c):
-    return a*math.sin(b*x) + c
-
-def fitCurves(data):
-    numFrames = data.shape[0]
-    numPoints = data.shape[1]
-
 

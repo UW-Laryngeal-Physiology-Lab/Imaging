@@ -25,13 +25,9 @@ window.init()
 templates, initialLocations = window.selectPoints(IMG_COLOR, IMG_GRAY, TEMPLATE_SIZE, midVal)
 window.kill()
 
-################################################################################
-# Motion Processing
-################################################################################
 print("Beginning tracking...\n" +
     "...please be patient at this time...")
 
-# point tracking stage
 locations = process.track(templates, initialLocations, METHOD, TEMPLATE_SIZE)
 
 distanceData = process.calculateDistance(locations, midVal)
