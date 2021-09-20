@@ -159,7 +159,7 @@ def fitSingleCurves(data, derivCurves=None):
         guesses = np.ones(3)
 
     for i in range(numPoints):
-        params, _ = curve_fit(objective, xVals, data[:, i], [1, int(guesses[1]), 1])
+        params, _ = curve_fit(objective, xVals, data[:, i], [20, int(guesses[1]), 1])
         paramsList = np.append(paramsList, [params], axis=0)
 
     # plt.plot(objective(xVals[0:200],*(paramsList[0])))

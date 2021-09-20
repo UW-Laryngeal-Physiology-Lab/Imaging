@@ -19,7 +19,7 @@ xClick,yClick = -1,-1
 xHover,yHover = -1,-1
 mouseRelease = True
 
-# mouse callback function
+# mouse callback function for calls related to selection
 def mouseEvent(event,xPos,yPos,flags,param):
     global xClick,yClick,xHover,yHover,mouseRelease
     if (event==cv2.EVENT_LBUTTONDOWN and mouseRelease==True):

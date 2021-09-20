@@ -11,6 +11,16 @@ import os
 import cv2
 
 def load(file):
+    """Function to load video into picsCache folder
+
+    Args:
+        file:   the file name
+
+    Returns:
+        counter:    the number of frames
+        FPS:        frames per second of loaded video
+
+    """
     print('Beginning loading of ' + './assets/' + file)
 
     cap = cv2.VideoCapture('./assets/' + file)

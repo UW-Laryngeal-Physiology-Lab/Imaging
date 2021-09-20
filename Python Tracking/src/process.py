@@ -13,6 +13,19 @@ from src import images
 import math
 
 def track(templates, initialLocations, METHOD, TEMPLATE_SIZE):
+    """Function to do tracking for points based on saved templates and initial 
+    locations.
+
+    Args:
+        templates           an array of template images
+        initialLocations    the initial locations of template images
+        METHOD              the template matching method
+        TEMPLATE_SIZE       size of each template
+
+    Returns:
+        locations       array of template locations for each frame. Indexing is
+                        [frame, point, x and y]
+    """
     NUM_POINTS = len(initialLocations)
     # array for all locations over all frames
     # indexing is [frame, point, x and y]
@@ -44,17 +57,6 @@ def track(templates, initialLocations, METHOD, TEMPLATE_SIZE):
             else:
                 softMinX = hardMinX
                 softMaxX = hardMaxX
-
-            # maxDeviation = 2
-            # if(i > 1):
-            #     locSub1 = locations[-1, j, 0]
-            #     locSub2 = locations[-2, j, 0]
-            #     predictedLoc = locSub1 - (locSub2 - locSub1)
-            #     softMinX = predictedLoc - TEMPLATE_SIZE - maxDeviation
-            #     softMaxX = predictedLoc + TEMPLATE_SIZE + maxDeviation
-            # else:
-            #     softMinX = hardMinX
-            #     softMaxX = hardMaxX
 
             # decides which boundary to use
             if(softMinX > hardMinX):
@@ -93,6 +95,15 @@ def track(templates, initialLocations, METHOD, TEMPLATE_SIZE):
 
 
 def calculateDistance(locations, midVal):
+    """Function to calculate distance from glottis for each point
+
+    Args:
+        locations   template match location data
+        midVal      middle pixel value
+
+    Returns:
+        data    array of distance from midline data for each point
+    """
     numFrames = locations.shape[0]
     numPoints = locations.shape[1]
     data = np.empty((numFrames, numPoints))
@@ -102,6 +113,8 @@ def calculateDistance(locations, midVal):
     return data
 
 def averageAndNormalize(data):
+    """Unused experimental function to normalize oscillation data
+    """
     pointMean = np.mean(data, 0)
     pointStd = np.std(data, 0)
     normalizedArray = (data - pointMean) / pointStd
@@ -113,6 +126,8 @@ def averageAndNormalize(data):
 REACH_CONSTANT = 30
 
 def getMaxIndices(data):
+    """Function to get the indices at which the peak of oscillation occurs
+    """
     numFrames = data.shape[0]
     numPoints = data.shape[1]
 

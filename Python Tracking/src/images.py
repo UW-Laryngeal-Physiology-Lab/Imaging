@@ -15,6 +15,14 @@ MAX_WIDTH = 1000
 MAX_HEIGHT = 600
 
 def load(i):
+    """Loads an image as array of pixel values
+
+    Args:
+        i   The image number as saved in picsCache folder
+
+    Returns:
+        img     the image array
+    """
     img = cv2.imread('./assets/picsCache/PIC' + str(i) + '.png', cv2.IMREAD_COLOR)
     if img is not None:
         h, w = img.shape[0], img.shape[1]
@@ -25,9 +33,23 @@ def load(i):
     return img
 
 def write(img, i):
+    """Writes an array of pixel values to an image
+
+    Args:
+        img     The array of pixel values
+        i       The image number as saved in picsCache folder
+    """
     cv2.imwrite('./assets/picsCache/PIC' + str(i) + '.png', img)
 
 def alignGlottis(p1, p2, NUM_FRAMES):
+    """Function to roate all images in picsCache
+
+    Args:
+        p1          one glottis endpoint
+        p2          the other glottis endpoint
+        NUM_FRAMES  number of frames to rotate
+
+    """
     midpoint = (p1[0] + (p2[0] - p1[0])/2, p1[1] + (p2[1] - p1[1])/2)
     inverseSlope = (p1[0] - p2[0]) / (p1[1] - p2[1])
     angleFromVertAxis = -math.tan(inverseSlope) * 180 / math.pi

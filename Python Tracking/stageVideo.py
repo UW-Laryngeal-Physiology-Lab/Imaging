@@ -2,7 +2,12 @@
 #
 #   Program Purpose: This program is the first of three programs necessary for 
 #                    processing videos. This program does frame extraction and 
-#                    rotational adjustment for easier tracking.
+#                    vertical glottis alignment for easier tracking.
+#
+#                    Note: there is an glaring bug in this program that pertains
+#                    to when the desired vertical alignment is close to 
+#                    vertical. It may come down to some rounding for the 
+#                    rotation matrix.
 #
 #   Primary Author:  Ben Wurster
 #
@@ -14,20 +19,22 @@ from src import *
 import json
 import math
 
-
+# metadata file for storing info related to video once segmented into images
 metaFile = open('./assets/metadata.json', 'r+')
-
 json.dump({}, metaFile)
 metaFile.truncate()
 metaFile.seek(0)
-
 vidData = json.load(metaFile)
 
-NUM_FRAMES, FPS = video.load('motion.avi')
+# load video as individual frames and return video info
+#                            VV Can be changed to analyze different video
+NUM_FRAMES, FPS = video.load('Normal.avi')
 
+# add to the json
 vidData["fps"] = FPS
 vidData["frameCount"] = NUM_FRAMES
 
+# display window to draw a desired midline
 window.init()
 p1, p2 = window.drawMidline(images.load(0))
 window.kill()
@@ -35,6 +42,7 @@ window.kill()
 print("Beginning automatic image alignment...\n" +
     "...please be patient at this time...")
 
+# location of slight rotation bug
 def verticalAlignGlottis(p1, p2, NUM_FRAMES):
     '''Overwrites existing images in cache with adjusted images to vertically 
     align the glottis.
@@ -91,7 +99,10 @@ def crop(img, midpoint, midlineLength):
     img = img[top:bottom, left:right, :]
     return img
 
-# vvv return to standard program execution flow
+#
+# return to standard program execution flow
+#
+
 if(p1[0] != p2[0]):
     verticalAlignGlottis(p1, p2, NUM_FRAMES)
 else:
